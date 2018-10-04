@@ -1,0 +1,13 @@
+.navbar-brand img{
+    max-height: 20px;
+    display: inline-block;
+}
+.top-padding{
+	margin-top: 100px;
+}
+
+footer{
+	margin-top: 50px;
+	padding: 20px;
+	border-top: 1px solid lightgray;
+}
