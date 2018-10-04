@@ -2,6 +2,13 @@
     max-height: 20px;
     display: inline-block;
 }
+nav ul li span{
+	color: white;
+	line-height: 20px;
+	position: relative;
+	display: block;
+	padding: 15px 15px;
+}
 .top-padding{
 	margin-top: 100px;
 }
@@ -11,3 +18,4 @@ footer{
 	padding: 20px;
 	border-top: 1px solid lightgray;
 }
+

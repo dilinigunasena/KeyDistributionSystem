@@ -3,27 +3,23 @@
 class User
 {
     public $id;
+    public $loggedIn;
     protected $username;
     protected $role;
-
-    public function getRole()
-    {
-        return $this->role;
-    }
     // protected $password;
-    private $db;
 
     function __construct()
     {
-        $this->db = DbCon::minimumPriv();
+        $this->loggedIn = false;
     }
 
 
     function login($uname, $password)
     {
+        $db = DbCon::minimumPriv();
         $pass_hash = hash('sha256', $password);
         $query = "SELECT count(*) FROM accounts WHERE u_name=? and u_pass=?";
-        $result = $this->db->getFirstRow($query, [$uname, $pass_hash]);
+        $result = $db->getFirstRow($query, [$uname, $pass_hash]);
         if ($result === false) {
             throw new Exception("Login Failed.");
         }
@@ -35,10 +31,11 @@ class User
 
     function initializeUser()
     {
-        $result = $this->db->getFirstRow("select u_id, u_role from accounts where u_name = ?", [$this->username]);
+        $db = DbCon::minimumPriv();
+        $result = $db->getFirstRow("select u_id, u_role from accounts where u_name = ?", [$this->username]);
         $this->id = $result['u_id'];
-        $this->username = $result['u_name'];
         $this->role = $result['u_role'];
+        $this->loggedIn = true;
 //        $this->password = $result['u_pass'];
     }
 
@@ -62,12 +59,32 @@ class User
         $sql = 'INSERT INTO accounts (u_name, u_role, u_pass) VALUES (?, ?, ?)';
         $params = [$user, $role_int, $pass_hash];
 
-        $success = $this->db->runParamQuery($sql, $params);
+        $db = DbCon::minimumPriv();
+        $success = $db->runParamQuery($sql, $params);
         if (!$success)
             throw new Exception("Registration Unsuccessful");
 
-        $user_id = $this->db->lastInsertID();
+        $user_id = $db->lastInsertID();
         return $user_id;
+    }
+
+    public function getRole()
+    {
+        return $this->role;
+    }
+
+    public function getRoleName()
+    {
+        return UserRole::OUTPUT[$this->role];
+    }
+
+    public function getPartition(){
+        return UserRole::PARTITIONS[$this->role];
+    }
+
+    public function getUsername()
+    {
+        return $this->username;
     }
 
 
