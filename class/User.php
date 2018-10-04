@@ -2,85 +2,73 @@
 
 class User
 {
-	public $regID;
-	protected $dispName;
-	protected $password;
+    public $id;
+    protected $username;
+    protected $role;
+
+    public function getRole()
+    {
+        return $this->role;
+    }
+    // protected $password;
     private $db;
 
     function __construct()
     {
-        $this->db = new DbCon();
-    }
-
-	
-	function getProfile()   //used in header.php
-	{
-		return $this->fName.' '.$this->lName;
-	}
-	
-	function setRegID($id)
-	{
-		$this->regID = $id;
-	}
-	function getRegID()
-	{
-		return $this->regID;
-	}
-
-	public function setDispName($name)
-	{
-		$this->dispName = $name;
-	}
-	public function getDispName()
-	{
-		return $this->dispName;
-	}
-
-	function setPassword($pass)
-	{
-		$this->password = $pass;
-	}
-	function getPassword()
-	{
-		return $this->password;
-	}
-
-	function login($disp, $pass)
-	{
-		$query = sprintf("SELECT * FROM account WHERE display_name='%s' and password= md5('%s') and verified = 1",$disp, $disp, $pass);
-		$result= $this->db->getFirstRow($query);
-		if($result != 0)
-		{
-			$this->initializeUser($result);
-            return 1;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-    function initializeUser($result)
-    {
-        $this->regID = $result['reg_id'];
-        $this->dispName = $result['display_name'];
-        $this->password = $result['password'];
-        $uDetails = $this->db->getFirstRow("select * from user where reg_id =". $this->regID);
+        $this->db = DbCon::minimumPriv();
     }
 
 
-
-    function registration(array $accDetails,array $userDetails)
+    function login($uname, $password)
     {
-        $accDetails['verified'] = 0;
-        $getId = $this->db->runInsertAndGetID('account', $accDetails);
-
-        if ($getId) {
-        $userDetails['reg_id'] = $getId;
+        $pass_hash = hash('sha256', $password);
+        $query = "SELECT count(*) FROM accounts WHERE u_name=? and u_pass=?";
+        $result = $this->db->getFirstRow($query, [$uname, $pass_hash]);
+        if ($result === false) {
+            throw new Exception("Login Failed.");
         }
-
+        if ($result[0] != 1)
+            return false;
+        $this->username = $uname;
+        return true;
     }
 
+    function initializeUser()
+    {
+        $result = $this->db->getFirstRow("select u_id, u_role from accounts where u_name = ?", [$this->username]);
+        $this->id = $result['u_id'];
+        $this->username = $result['u_name'];
+        $this->role = $result['u_role'];
+//        $this->password = $result['u_pass'];
+    }
+
+
+    function registration($user, $password, $role_int)
+    {
+        switch ($role_int) {
+            case UserRole::MachineUser:
+            case UserRole::Administrator:
+            case UserRole::SysAdmin:
+                $role = True;
+                break;
+            default:
+                $role = False;
+                break;
+        }
+        if (!$role)
+            throw new Exception("Invalid role");
+
+        $pass_hash = hash('sha256', $password);
+        $sql = 'INSERT INTO accounts (u_name, u_role, u_pass) VALUES (?, ?, ?)';
+        $params = [$user, $role_int, $pass_hash];
+
+        $success = $this->db->runParamQuery($sql, $params);
+        if (!$success)
+            throw new Exception("Registration Unsuccessful");
+
+        $user_id = $this->db->lastInsertID();
+        return $user_id;
+    }
 
 
 }
